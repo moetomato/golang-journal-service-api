@@ -6,27 +6,27 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/moetomato/golang-journal-service-api/controllers/services"
 	"github.com/moetomato/golang-journal-service-api/models"
-	"github.com/moetomato/golang-journal-service-api/services"
 )
 
-type JournalAppController struct {
-	service *services.AppService
+type JournalController struct {
+	srvc services.JournalServicer
 }
 
-func AppController(s *services.AppService) *JournalAppController {
-	return &JournalAppController{service: s}
+func NewJournalController(s services.JournalServicer) *JournalController {
+	return &JournalController{srvc: s}
 }
 
 // GET /Journal/{id}
-func (c *JournalAppController) JournalDetailHandler(w http.ResponseWriter, req *http.Request) {
+func (c *JournalController) JournalDetailHandler(w http.ResponseWriter, req *http.Request) {
 	JournalID, err := strconv.Atoi(mux.Vars(req)["id"])
 	if err != nil {
 		http.Error(w, "Invalid query parameter", http.StatusBadRequest)
 		return
 	}
 
-	Journal, err := c.service.GetJournalByIDService(JournalID)
+	Journal, err := c.srvc.GetJournalByIDService(JournalID)
 	if err != nil {
 		http.Error(w, "fail internal exec\n", http.StatusInternalServerError)
 		return
@@ -36,7 +36,7 @@ func (c *JournalAppController) JournalDetailHandler(w http.ResponseWriter, req *
 }
 
 // GET /Journal/list
-func (c *JournalAppController) JournalListHandler(w http.ResponseWriter, req *http.Request) {
+func (c *JournalController) JournalListHandler(w http.ResponseWriter, req *http.Request) {
 	const defaultPage = 1
 
 	queryMap := req.URL.Query()
@@ -54,7 +54,7 @@ func (c *JournalAppController) JournalListHandler(w http.ResponseWriter, req *ht
 		page = defaultPage
 	}
 
-	JournalList, err := c.service.GetJournalListService(page)
+	JournalList, err := c.srvc.GetJournalListService(page)
 	if err != nil {
 		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
 		return
@@ -64,13 +64,13 @@ func (c *JournalAppController) JournalListHandler(w http.ResponseWriter, req *ht
 }
 
 // POST /Journal
-func (c *JournalAppController) PostJournalHandler(w http.ResponseWriter, req *http.Request) {
+func (c *JournalController) PostJournalHandler(w http.ResponseWriter, req *http.Request) {
 	var reqJournal models.Journal
 	if err := json.NewDecoder(req.Body).Decode(&reqJournal); err != nil {
 		http.Error(w, "failed to decode json\n", http.StatusBadRequest)
 	}
 
-	Journal, err := c.service.PostJournalService(reqJournal)
+	Journal, err := c.srvc.PostJournalService(reqJournal)
 	if err != nil {
 		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
 		return
@@ -80,13 +80,13 @@ func (c *JournalAppController) PostJournalHandler(w http.ResponseWriter, req *ht
 }
 
 // POST /Journal/nice
-func (c *JournalAppController) PostNiceHandler(w http.ResponseWriter, req *http.Request) {
+func (c *JournalController) PostNiceHandler(w http.ResponseWriter, req *http.Request) {
 	var reqJournal models.Journal
 	if err := json.NewDecoder(req.Body).Decode(&reqJournal); err != nil {
 		http.Error(w, "failed to decode json\n", http.StatusBadRequest)
 	}
 
-	Journal, err := c.service.PostNiceService(reqJournal)
+	Journal, err := c.srvc.PostNiceService(reqJournal)
 	if err != nil {
 		http.Error(w, "failed internal exec\n", http.StatusInternalServerError)
 		return

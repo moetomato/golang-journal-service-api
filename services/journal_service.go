@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"errors"
+	"sync"
 
 	"github.com/moetomato/golang-journal-service-api/apperrors"
 	"github.com/moetomato/golang-journal-service-api/models"
@@ -10,23 +11,49 @@ import (
 )
 
 func (s *AppService) GetJournalByIDService(journalID int) (models.Journal, error) {
+	var journal models.Journal
+	var comments []models.Comment
+	var journalGetErr, commentGetErr error
 
-	journal, err := repositories.SelectJournalByID(s.db, journalID)
+	var jmu sync.Mutex
+	var cmu sync.Mutex
 
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			err = apperrors.NAData.Wrap(err, "no matching record was found.")
-			return models.Journal{}, err
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func(db *sql.DB, journalID int) {
+		defer wg.Done()
+		j, e := repositories.SelectJournalByID(s.db, journalID)
+		jmu.Lock()
+		journal, journalGetErr = j, e
+		jmu.Unlock()
+	}(s.db, journalID)
+
+	go func(db *sql.DB, journalID int) {
+		defer wg.Done()
+		c, e := repositories.SelectCommentList(s.db, journalID)
+		cmu.Lock()
+		comments, commentGetErr = c, e
+		cmu.Unlock()
+
+	}(s.db, journalID)
+
+	wg.Wait()
+
+	if journalGetErr != nil {
+		if errors.Is(journalGetErr, sql.ErrNoRows) {
+			journalGetErr = apperrors.NAData.Wrap(journalGetErr, "no matching record was found.")
+			return models.Journal{}, journalGetErr
 		}
-		err = apperrors.GetDataFailed.Wrap(err, "failed to get data")
-		return models.Journal{}, err
+		journalGetErr = apperrors.GetDataFailed.Wrap(journalGetErr, "failed to get data")
+		return models.Journal{}, journalGetErr
 	}
-	commentList, err := repositories.SelectCommentList(s.db, journalID)
-	if err != nil {
-		err = apperrors.GetDataFailed.Wrap(err, "failed to get data")
-		return models.Journal{}, err
+	if commentGetErr != nil {
+		commentGetErr = apperrors.GetDataFailed.Wrap(commentGetErr, "failed to get data")
+		return models.Journal{}, commentGetErr
 	}
-	journal.CommentList = append(journal.CommentList, commentList...)
+
+	journal.CommentList = append(journal.CommentList, comments...)
 	return journal, nil
 
 }

@@ -3,7 +3,6 @@ package services
 import (
 	"database/sql"
 	"errors"
-	"sync"
 
 	"github.com/moetomato/golang-journal-service-api/apperrors"
 	"github.com/moetomato/golang-journal-service-api/models"
@@ -15,30 +14,37 @@ func (s *AppService) GetJournalByIDService(journalID int) (models.Journal, error
 	var comments []models.Comment
 	var journalGetErr, commentGetErr error
 
-	var jmu sync.Mutex
-	var cmu sync.Mutex
+	type journalResult struct {
+		journal models.Journal
+		err     error
+	}
+	jch := make(chan journalResult)
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func(db *sql.DB, journalID int) {
-		defer wg.Done()
+	go func(ch chan<- journalResult, db *sql.DB, journalID int) {
 		j, e := repositories.SelectJournalByID(s.db, journalID)
-		jmu.Lock()
-		journal, journalGetErr = j, e
-		jmu.Unlock()
-	}(s.db, journalID)
+		ch <- journalResult{journal: j, err: e}
+	}(jch, s.db, journalID)
 
-	go func(db *sql.DB, journalID int) {
-		defer wg.Done()
+	type commentResult struct {
+		comments []models.Comment
+		err      error
+	}
+	cch := make(chan commentResult)
+
+	go func(ch chan<- commentResult, db *sql.DB, journalID int) {
 		c, e := repositories.SelectCommentList(s.db, journalID)
-		cmu.Lock()
-		comments, commentGetErr = c, e
-		cmu.Unlock()
+		ch <- commentResult{comments: c, err: e}
 
-	}(s.db, journalID)
+	}(cch, s.db, journalID)
 
-	wg.Wait()
+	for i := 0; i < 2; i++ {
+		select {
+		case j := <-jch:
+			journal, journalGetErr = j.journal, j.err
+		case c := <-cch:
+			comments, commentGetErr = c.comments, c.err
+		}
+	}
 
 	if journalGetErr != nil {
 		if errors.Is(journalGetErr, sql.ErrNoRows) {

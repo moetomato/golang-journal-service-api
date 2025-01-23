@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/moetomato/golang-journal-service-api/api/loggings"
+
+	"github.com/moetomato/golang-journal-service-api/api/middlewares"
 	"github.com/moetomato/golang-journal-service-api/controllers"
 	"github.com/moetomato/golang-journal-service-api/services"
 )
@@ -19,11 +20,11 @@ func NewRouter(db *sql.DB) *mux.Router {
 
 	r.HandleFunc("/journal", jcon.PostJournalHandler).Methods(http.MethodPost)
 	r.HandleFunc("/journal/list", jcon.JournalListHandler).Methods(http.MethodGet)
-	r.HandleFunc("/journal/{id:[0-9]+}", jcon.JournalDetailHandler).Methods(http.MethodGet)
+	r.HandleFunc("/journal/{id:.*}", jcon.JournalDetailHandler).Methods(http.MethodGet)
 	r.HandleFunc("/journal/nice", jcon.PostNiceHandler).Methods(http.MethodPost)
 
 	r.HandleFunc("/comment", ccon.PostCommentHandler).Methods(http.MethodPost)
-	r.Use(loggings.LoggingMiddleware)
+	r.Use(middlewares.LoggingMiddleware)
 
 	return r
 }

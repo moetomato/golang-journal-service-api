@@ -1,4 +1,4 @@
-package loggings
+package middlewares
 
 import (
 	"log"
@@ -30,11 +30,15 @@ func (rsw *resLoggingWriter) WriteHeader(statusCode int) {
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		log.Println(req.RequestURI, req.Method)
+		traceID := newTraceID()
+		log.Printf("TraceID : %d, URI : %s, Method : %s\n", traceID, req.RequestURI, req.Method)
+
+		ctx := SetTraceID(req.Context(), traceID)
+		req = req.WithContext(ctx)
 
 		// to log response code
 		rsw := NewResLoggingWriter(w)
 		next.ServeHTTP(rsw, req)
-		log.Println("response code", rsw.code)
+		log.Printf("TraceID : %d, StatusCode: %d", traceID, rsw.code)
 	})
 }

@@ -20,7 +20,9 @@ func AuthMiddleware(h http.Handler) http.Handler {
 
 		authHeaders := strings.Split(authorization, " ")
 		if len(authHeaders) != 2 {
-			apperrors.RequiredAuthorizationHeader.Wrap(errors.New("invalid header"), "no authorization header found")
+			err := apperrors.RequiredAuthorizationHeader.Wrap(errors.New("invalid header"), "no authorization header found")
+			apperrors.ErrorHandler(w, req, err)
+			return
 		}
 
 		bearer, token := authHeaders[0], authHeaders[1]

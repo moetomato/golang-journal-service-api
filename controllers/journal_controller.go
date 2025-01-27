@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/moetomato/golang-journal-service-api/apperrors"
+	"github.com/moetomato/golang-journal-service-api/common"
 	"github.com/moetomato/golang-journal-service-api/controllers/services"
 	"github.com/moetomato/golang-journal-service-api/models"
 )
@@ -68,6 +70,13 @@ func (c *JournalController) PostJournalHandler(w http.ResponseWriter, req *http.
 
 	if err := json.NewDecoder(req.Body).Decode(&reqJournal); err != nil {
 		err = apperrors.ReqBodyDecodeFailed.Wrap(err, "bad request body")
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
+
+	authedUserName := common.GetUserName(req.Context())
+	if reqJournal.UserName != authedUserName {
+		err := apperrors.UserUnmatched.Wrap(errors.New("does not match user names in req body and idtoken"), "invalid parameter")
 		apperrors.ErrorHandler(w, req, err)
 		return
 	}

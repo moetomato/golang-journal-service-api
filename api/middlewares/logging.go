@@ -3,6 +3,8 @@ package middlewares
 import (
 	"log"
 	"net/http"
+
+	"github.com/moetomato/golang-journal-service-api/common"
 )
 
 /*
@@ -33,7 +35,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		traceID := newTraceID()
 		log.Printf("TraceID : %d, URI : %s, Method : %s\n", traceID, req.RequestURI, req.Method)
 
-		ctx := SetTraceID(req.Context(), traceID)
+		ctx := common.SetTraceID(req.Context(), traceID)
 		req = req.WithContext(ctx)
 
 		// to log response code

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/moetomato/golang-journal-service-api/api"
 )
 
@@ -18,7 +19,6 @@ func main() {
 		// [temporal] work on localhost とりあえず
 		dbConn = fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s?parseTime=true", dbUser, dbPass, dbName)
 	)
-
 	db, err := sql.Open("mysql", dbConn)
 	if err != nil {
 		log.Println("failed to connect DataBase")

@@ -35,12 +35,12 @@ func AuthMiddleware(h http.Handler) http.Handler {
 
 		tokenValidator, err := idtoken.NewValidator(context.Background())
 		if err != nil {
-			apperrors.MakeValidatorFailed.Wrap(err, "could not create token validator")
+			err = apperrors.MakeValidatorFailed.Wrap(err, "could not create token validator")
 		}
 		payload, err := tokenValidator.Validate(context.Background(), token, googleClientID)
 
 		if err != nil {
-			apperrors.Unauthorizated.Wrap(err, "invalid id token")
+			err = apperrors.Unauthorizated.Wrap(err, "invalid id token")
 			apperrors.ErrorHandler(w, req, err)
 			return
 		}
